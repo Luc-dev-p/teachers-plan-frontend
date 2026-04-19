@@ -1,56 +1,56 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api.js';
 
-export const AuthContext = createContext(null);
+const AuthContext = createContext(null);
 
-export const utiliserAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('utiliserAuth doit être utilisé dans AuthContext');
-  return context;
-};
-
-export default function AuthProvider({ children }) {
+export function AuthProvider({ children }) {
   const [utilisateur, setUtilisateur] = useState(null);
+  const [token, setToken] = useState(null);
   const [chargement, setChargement] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('tp_token');
-    const user = localStorage.getItem('tp_utilisateur');
-    if (token && user) {
+    const tokenStocke = localStorage.getItem('token');
+    const utilisateurStocke = localStorage.getItem('utilisateur');
+
+    if (tokenStocke && utilisateurStocke) {
       try {
-        api.defaults.headers.common['Authorization'] = `Porteur ${token}`;
-        setUtilisateur(JSON.parse(user));
-      } catch {
-        localStorage.removeItem('tp_token');
-        localStorage.removeItem('tp_utilisateur');
+        setToken(tokenStocke);
+        setUtilisateur(JSON.parse(utilisateurStocke));
+      } catch (e) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('utilisateur');
       }
     }
     setChargement(false);
   }, []);
 
-  const connexion = (token, user) => {
-    localStorage.setItem('tp_token', token);
-    localStorage.setItem('tp_utilisateur', JSON.stringify(user));
-    api.defaults.headers.common['Authorization'] = `Porteur ${token}`;
-    setUtilisateur(user);
+  const connexion = (nouveauToken, nouvelUtilisateur) => {
+    localStorage.setItem('token', nouveauToken);
+    localStorage.setItem('utilisateur', JSON.stringify(nouvelUtilisateur));
+    setToken(nouveauToken);
+    setUtilisateur(nouvelUtilisateur);
   };
 
   const deconnexion = () => {
-    localStorage.removeItem('tp_token');
-    localStorage.removeItem('tp_utilisateur');
-    delete api.defaults.headers.common['Authorization'];
+    localStorage.removeItem('token');
+    localStorage.removeItem('utilisateur');
+    setToken(null);
     setUtilisateur(null);
   };
 
-  const mettreAJour = (donnees) => {
-    const nouveau = { ...utilisateur, ...donnees };
-    localStorage.setItem('tp_utilisateur', JSON.stringify(nouveau));
-    setUtilisateur(nouveau);
-  };
-
   return (
-    <AuthContext.Provider value={{ utilisateur, chargement, connexion, deconnexion, mettreAJour }}>
+    <AuthContext.Provider value={{ utilisateur, token, chargement, connexion, deconnexion }}>
       {children}
     </AuthContext.Provider>
   );
 }
+
+export function utiliserAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('utiliserAuth doit être utilisé dans un AuthProvider');
+  }
+  return context;
+}
+
+export default AuthContext;

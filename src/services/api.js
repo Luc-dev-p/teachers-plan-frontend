@@ -1,28 +1,33 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-  timeout: 15000,
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: 'http://localhost:5001/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
+// Intercepteur pour ajouter le token Bearer
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('tp_token');
+  const token = localStorage.getItem('token');
   if (token) {
-    config.headers.Authorization = `Porteur ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
+// Intercepteur pour gérer les erreurs 401 (SAUF sur /auth/login)
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('tp_token');
-      localStorage.removeItem('tp_utilisateur');
+  (response) => response,
+  (error) => {
+    // Ne PAS rediriger si c'est la route de connexion
+    const url = error.config?.url || '';
+    if (error.response?.status === 401 && !url.includes('/auth/login')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('utilisateur');
       window.location.href = '/connexion';
     }
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 

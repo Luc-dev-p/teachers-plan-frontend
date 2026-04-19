@@ -34,7 +34,10 @@ function RoutesPrivees() {
     );
   }
 
-  if (!utilisateur) return <Navigate to="/connexion" />;
+  // Vérifie le state React ET localStorage comme fallback
+  const tokenLocal = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  if (!utilisateur && !tokenLocal) return <Navigate to="/connexion" />;
 
   return (
     <SidebarProvider>

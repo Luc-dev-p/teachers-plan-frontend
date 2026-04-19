@@ -17,11 +17,15 @@ export default function Connexion() {
     e.preventDefault();
     setErreur('');
     setChargement(true);
+    console.log('📤 Envoi de la requête...', { email });
     try {
-      const res = await api.post('/auth/connexion', { email, mot_de_passe: motDePasse });
+      const res = await api.post('/auth/login', { email, mot_de_passe: motDePasse });
+      console.log('✅ Réponse reçue:', res.status, res.data);
       connexion(res.data.token, res.data.utilisateur);
+      console.log('🔐 Token et utilisateur sauvegardés, redirection...');
       navigate('/');
     } catch (err) {
+      console.error('❌ Erreur:', err.response?.status, err.response?.data, err.message);
       setErreur(err.response?.data?.message || 'Erreur de connexion');
     } finally {
       setChargement(false);
@@ -30,7 +34,6 @@ export default function Connexion() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Côté gauche - branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-midnight flex-col items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-sky blur-3xl" />
@@ -50,7 +53,6 @@ export default function Connexion() {
         </div>
       </div>
 
-      {/* Côté droit - formulaire */}
       <div className="flex-1 flex items-center justify-center p-8 bg-snow">
         <div className="w-full max-w-md">
           <div className="lg:hidden text-center mb-8">

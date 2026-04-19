@@ -17,7 +17,7 @@ export default function FormulaireMatiere({ matiere, filieres, fermer, sauvegard
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
 
-  const sauvegarder = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErreur('');
     setChargement(true);
@@ -33,7 +33,7 @@ export default function FormulaireMatiere({ matiere, filieres, fermer, sauvegard
   return (
     <Modal ouvert={true} fermer={fermer} titre={estEdit ? 'Modifier la matière' : 'Nouvelle matière'}>
       {erreur && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{erreur}</div>}
-      <form onSubmit={sauvegarder} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label-field">Code *</label>
