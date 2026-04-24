@@ -4,13 +4,14 @@ const SidebarContext = createContext(null);
 
 export function SidebarProvider({ children }) {
   const [ouvert, setOuvert] = useState(true);
+  const [mobileOuvert, setMobileOuvert] = useState(false);
 
   const basculer = () => setOuvert((prev) => !prev);
-  const fermer = () => setOuvert(false);
-  const ouvrir = () => setOuvert(true);
+  const fermerMobile = () => setMobileOuvert(false);
+  const ouvrirMobile = () => setMobileOuvert(true);
 
   return (
-    <SidebarContext.Provider value={{ ouvert, basculer, fermer, ouvrir }}>
+    <SidebarContext.Provider value={{ ouvert, basculer, mobileOuvert, ouvrirMobile, fermerMobile }}>
       {children}
     </SidebarContext.Provider>
   );

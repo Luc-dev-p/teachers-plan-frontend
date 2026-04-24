@@ -1,72 +1,58 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api.js';
-import { utiliserAuth } from '../../context/AuthContext.jsx';
-import Chargement from '../../components/ui/Chargement.jsx';
-import Alerte from '../../components/ui/Alerte.jsx';
-import Bouton from '../../components/ui/Bouton.jsx';
-import Modal from '../../components/ui/Modal.jsx';
-import Select from '../../components/ui/Select.jsx';
-import Pagination from '../../components/ui/Pagination.jsx';
-import EmptyState from '../../components/ui/EmptyState.jsx';
-import { Plus, Search, Building2, Pencil, Trash2, Users } from 'lucide-react';
+import { Building2, Plus, Edit2, Trash2, Search, RefreshCw, X } from 'lucide-react';
 
 export default function Departements() {
-  const { utilisateur } = utiliserAuth();
-  const role = utilisateur?.role || 'enseignant';
   const [departements, setDepartements] = useState([]);
   const [chargement, setChargement] = useState(true);
-  const [erreur, setErreur] = useState('');
   const [recherche, setRecherche] = useState('');
-  const [page, setPage] = useState(1);
   const [modal, setModal] = useState(false);
-  const [edit, setEdit] = useState(null);
-  const [form, setForm] = useState({ code: '', nom: '', description: '' });
-  const [enSauvegarde, setEnSauvegarde] = useState(false);
+  const [edition, setEdition] = useState(null);
+  const [formulaire, setFormulaire] = useState({ code: '', nom: '' });
+  const [soumission, setSoumission] = useState(false);
 
-  const fetch = async () => {
+  const charger = async () => {
     setChargement(true);
     try {
       const res = await api.get('/departements');
       setDepartements(res.data);
     } catch (err) {
-      setErreur(err.response?.data?.message || 'Erreur');
+      console.error('Erreur:', err);
     } finally {
       setChargement(false);
     }
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { charger(); }, []);
 
-  const filtered = departements.filter((d) => {
-    const t = recherche.toLowerCase();
-    return d.nom?.toLowerCase().includes(t) || d.code?.toLowerCase().includes(t);
-  });
-  const parPage = 10;
-  const paginated = filtered.slice((page - 1) * parPage, page * parPage);
-
-  const ouvrir = (dep = null) => {
-    setEdit(dep);
-    setForm(dep ? { code: dep.code, nom: dep.nom, description: dep.description || '' } : { code: '', nom: '', description: '' });
+  const ouvrirCreation = () => {
+    setEdition(null);
+    setFormulaire({ code: '', nom: '' });
     setModal(true);
   };
 
-  const sauvegarder = async (e) => {
+  const ouvrirEdition = (item) => {
+    setEdition(item.id);
+    setFormulaire({ code: item.code, nom: item.nom });
+    setModal(true);
+  };
+
+  const soumettre = async (e) => {
     e.preventDefault();
-    setEnSauvegarde(true);
-    setErreur('');
+    if (!formulaire.code.trim() || !formulaire.nom.trim()) return;
+    setSoumission(true);
     try {
-      if (edit) {
-        const res = await api.put(`/departements/${edit.id}`, form);
-        setDepartements((prev) => prev.map((d) => (d.id === edit.id ? { ...d, ...res.data } : d)));
+      if (edition) {
+        await api.put(`/departements/${edition}`, formulaire);
       } else {
-        const res = await api.post('/departements', form);
-        setDepartements((prev) => [...prev, res.data]);
+        await api.post('/departements', formulaire);
       }
       setModal(false);
+      charger();
     } catch (err) {
-      setErreur(err.response?.data?.message || 'Erreur de sauvegarde');
+      console.error('Erreur:', err);
     } finally {
-      setEnSauvegarde(false);
+      setSoumission(false);
     }
   };
 
@@ -74,91 +60,134 @@ export default function Departements() {
     if (!confirm('Supprimer ce département ?')) return;
     try {
       await api.delete(`/departements/${id}`);
-      setDepartements((prev) => prev.filter((d) => d.id !== id));
+      charger();
     } catch (err) {
-      setErreur(err.response?.data?.message || 'Erreur de suppression');
+      console.error('Erreur:', err);
     }
   };
 
-  if (chargement) return <Chargement />;
-  return (
-    <div className="space-y-4">
-      {erreur && <Alerte type="erreur" message={erreur} fermer={() => setErreur('')} />}
+  const filtres = departements.filter((d) =>
+    d.nom.toLowerCase().includes(recherche.toLowerCase()) ||
+    d.code.toLowerCase().includes(recherche.toLowerCase())
+  );
 
+  return (
+    <div className="space-y-6">
+      {/* En-tête */}
       <div className="page-header">
-        <div className="flex items-center gap-3">
-          <h1 className="page-title">Départements</h1>
-          <span className="badge-info">{filtered.length}</span>
+        <div>
+          <h1 className="text-2xl font-bold text-midnight flex items-center gap-3">
+            <Building2 size={28} /> Départements
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">Gérez les départements de l'université</p>
         </div>
-        {role !== 'enseignant' && (
-          <Bouton onClick={() => ouvrir()}><Plus size={16} /> Nouveau</Bouton>
-        )}
+        <button onClick={ouvrirCreation} className="btn-primary gap-2">
+          <Plus size={16} /> Nouveau département
+        </button>
       </div>
 
-      <div className="card p-4">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Barre recherche */}
+      <div className="flex gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
-            type="text" value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(1); }}
-            placeholder="Rechercher un département..." className="input-field pl-9"
+            type="text"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Rechercher un département..."
+            className="input-field pl-10"
           />
         </div>
+        <button onClick={charger} disabled={chargement} className="btn-secondary">
+          <RefreshCw size={16} className={chargement ? 'animate-spin' : ''} />
+        </button>
       </div>
 
-      {paginated.length === 0 ? (
-        <EmptyState message="Aucun département trouvé" icone={Building2} />
+      {/* Contenu */}
+      {chargement ? (
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="animate-spin text-navy" size={24} />
+        </div>
+      ) : filtres.length === 0 ? (
+        <div className="card p-12 text-center">
+          <Building2 className="mx-auto text-slate-300 mb-3" size={48} />
+          <p className="text-slate-500 font-medium">Aucun département trouvé</p>
+          <p className="text-sm text-slate-400 mt-1">Commencez par ajouter un département</p>
+        </div>
       ) : (
-        <div className="card overflow-hidden">
-          <div className="table-container border-0 rounded-none">
-            <table className="data-table">
-              <thead>
-                <tr><th>Code</th><th>Nom</th><th>Description</th><th>Enseignants</th>{role !== 'enseignant' && <th className="text-right">Actions</th>}</tr>
-              </thead>
-              <tbody>
-                {paginated.map((d) => (
-                  <tr key={d.id}>
-                    <td className="font-mono text-xs">{d.code}</td>
-                    <td className="font-medium">{d.nom}</td>
-                    <td className="text-slate-500 text-sm">{d.description || '—'}</td>
-                    <td><span className="badge-info"><Users size={12} className="mr-1" />{d._count?.enseignants || d.nombre_enseignants || 0}</span></td>
-                    {role !== 'enseignant' && (
-                      <td className="text-right">
-                        <button onClick={() => ouvrir(d)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-navy"><Pencil size={15} /></button>
-                        <button onClick={() => supprimer(d.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 size={15} /></button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="px-4 py-3">
-            <Pagination page={page} total={filtered.length} parPage={parPage} onPageChange={setPage} />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtres.map((d) => (
+            <div key={d.id} className="card p-5 group">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-navy to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {d.code?.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-midnight">{d.nom}</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Code: {d.code}</p>
+                  </div>
+                </div>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => ouvrirEdition(d)} className="p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                    <Edit2 size={15} />
+                  </button>
+                  <button onClick={() => supprimer(d.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
+      {/* Modal */}
       {modal && (
-        <Modal ouvert={modal} fermer={() => setModal(false)} titre={edit ? 'Modifier le département' : 'Nouveau département'}>
-          <form onSubmit={sauvegarder} className="space-y-4">
-            <div>
-              <label className="label-field">Code *</label>
-              <input type="text" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} required className="input-field" placeholder="Ex: INFO" />
+        <div className="modal-overlay" onClick={() => setModal(false)}>
+          <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-midnight">
+                {edition ? 'Modifier le département' : 'Nouveau département'}
+              </h2>
+              <button onClick={() => setModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
+                <X size={18} />
+              </button>
             </div>
-            <div>
-              <label className="label-field">Nom *</label>
-              <input type="text" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} required className="input-field" placeholder="Ex: Informatique" />
-            </div>
-            <div>
-              <label className="label-field">Description</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field" rows={3} />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Bouton variante="secondaire" onClick={() => setModal(false)} type="button">Annuler</Bouton>
-              <Bouton type="submit" chargement={enSauvegarde}>{edit ? 'Mettre à jour' : 'Créer'}</Bouton>
-            </div>
-          </form>
-        </Modal>
+            <form onSubmit={soumettre} className="p-6 space-y-4">
+              <div>
+                <label className="label-field">Code</label>
+                <input
+                  type="text"
+                  value={formulaire.code}
+                  onChange={(e) => setFormulaire({ ...formulaire, code: e.target.value })}
+                  className="input-field"
+                  placeholder="Ex: INFO, MATH, GEA..."
+                  required
+                />
+              </div>
+              <div>
+                <label className="label-field">Nom</label>
+                <input
+                  type="text"
+                  value={formulaire.nom}
+                  onChange={(e) => setFormulaire({ ...formulaire, nom: e.target.value })}
+                  className="input-field"
+                  placeholder="Ex: Informatique"
+                  required
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setModal(false)} className="btn-secondary flex-1">
+                  Annuler
+                </button>
+                <button type="submit" disabled={soumission} className="btn-primary flex-1">
+                  {soumission ? 'Enregistrement...' : edition ? 'Modifier' : 'Créer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

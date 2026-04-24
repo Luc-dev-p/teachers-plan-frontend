@@ -29,14 +29,15 @@ function RoutesPrivees() {
   if (chargement) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-snow">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-navy border-t-transparent" />
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-navy border-t-transparent mx-auto mb-4" />
+          <p className="text-sm text-slate-500">Chargement...</p>
+        </div>
       </div>
     );
   }
 
-  // Vérifie le state React ET localStorage comme fallback
   const tokenLocal = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
   if (!utilisateur && !tokenLocal) return <Navigate to="/connexion" />;
 
   return (
